@@ -12,28 +12,11 @@ Code Mode is disabled by default and the default `wrangler.toml` does not requir
 - Bun installed locally.
 - A Google Generative AI API key for the default Gemini model.
 - A random shared API key for Mirako to call your Worker `/v1/chat` endpoint.
-
-### Install Dependencies
-
-```bash
-bun install
-```
-
-### Log In To Cloudflare
-
-```bash
-bunx wrangler login
-```
-
-Confirm Wrangler can see your account:
-
-```bash
-bunx wrangler whoami
-```
+- The repo pushed to GitHub if you want Cloudflare to deploy from GitHub.
 
 ### Configure Worker Name
 
-Edit `wrangler.toml` and set a unique Worker name:
+Edit `wrangler.toml` and set a unique Worker name before connecting the repo:
 
 ```toml
 name = "your-agent-worker-name"
@@ -53,21 +36,42 @@ new_sqlite_classes = ["MetisAgentCore"]
 
 Do not change those unless you are intentionally renaming the Durable Object class and updating the code.
 
-### Set Secrets
-
-Set the shared API key:
+### Verify Locally
 
 ```bash
-bunx wrangler secret put API_KEY
+bun install
+bun run typecheck
+bun test
+bun run deploy:dry-run
 ```
 
-Set the Google API key:
+The dry run should list the Durable Object binding and environment variables. In the default configuration it should not list `env.LOADER`; that binding is only needed if you opt into Code Mode.
 
-```bash
-bunx wrangler secret put GOOGLE_API_KEY
-```
+### Deploy From GitHub In Cloudflare
 
-If you add MCP servers in `src/agent-config.ts` that need tokens, add matching optional fields to `worker-configuration.d.ts` and set those tokens as Worker secrets too.
+Use Cloudflare's GitHub integration when you want the Worker to deploy from this repository:
+
+1. Open the Cloudflare dashboard.
+2. Go to `Workers and Pages`.
+3. Click `Create application`.
+4. Click `Connect GitHub`.
+5. Authorize the repo in the GitHub popup.
+6. Select this repository.
+7. Leave `Build command` blank.
+8. Use the suggested deploy command: `npx wrangler deploy`.
+9. Click `Deploy`.
+
+After deployment, add runtime secrets in the Cloudflare dashboard:
+
+1. Open the deployed Worker.
+2. Go to `Settings`.
+3. Open `Variables and secrets`.
+4. Click `+ Add`.
+5. Add `API_KEY` with `Type = Secret`.
+6. Add `GOOGLE_API_KEY` with `Type = Secret`.
+7. Save or deploy the changes if Cloudflare prompts you to do so.
+
+If you add MCP servers in `src/agent-config.ts` that need tokens, add matching optional fields to `worker-configuration.d.ts` and add those values as Worker secrets too.
 
 ### Configure MCP Allowlist
 
@@ -86,17 +90,33 @@ MCP_SERVER_ALLOWLIST = "mcp.example.com,https://tools.example.org"
 
 Leave it empty if you are not using MCP.
 
-### Verify Before Deploying
+### Alternate: Deploy With Wrangler CLI
+
+You can also deploy manually from your terminal.
+
+Log in to Cloudflare:
 
 ```bash
-bun run typecheck
-bun test
-bun run deploy:dry-run
+bunx wrangler login
 ```
 
-The dry run should list the Durable Object binding and environment variables. In the default configuration it should not list `env.LOADER`; that binding is only needed if you opt into Code Mode.
+Confirm Wrangler can see your account:
 
-### Deploy
+```bash
+bunx wrangler whoami
+```
+
+Set the shared API key:
+
+```bash
+bunx wrangler secret put API_KEY
+```
+
+Set the Google API key:
+
+```bash
+bunx wrangler secret put GOOGLE_API_KEY
+```
 
 ```bash
 bun run deploy
@@ -171,13 +191,12 @@ mirako agent create
 When prompted:
 
 - Choose `custom agent`.
-- Follow the instructions to fill in
-  - The agent name.
-  - The agent description.
-  - Select the avatar
-  - Selectthe voice profile
-  - Enter your Cloudflare endpoint URL up to and including `/v1/chat`.
-  - Enter the API key you configured as the Worker `API_KEY` secret.
+- Enter the agent name.
+- Enter the agent description.
+- Select the avatar.
+- Select the voice profile.
+- Enter your Cloudflare endpoint URL up to and including `/v1/chat`.
+- Enter the API key you configured as the Worker `API_KEY` secret.
 
 Example endpoint value:
 
