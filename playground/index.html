@@ -289,7 +289,7 @@
         font-weight: 650;
       }
 
-      .tool-input {
+      .tool-payload {
         max-height: 260px;
         overflow: auto;
         margin: 0;
@@ -673,9 +673,16 @@
             detailNode.className = "tool-call-detail";
             detailNode.textContent = part.errorText;
             item.appendChild(detailNode);
-          } else if (part.input !== undefined) {
-            item.appendChild(createToolInputDetails(part.input));
-          } else if (part.toolCallId) {
+          } else {
+            if (part.input !== undefined) {
+              item.appendChild(createToolPayloadDetails("input", part.input));
+            }
+            if (part.output !== undefined) {
+              item.appendChild(createToolPayloadDetails("output", part.output));
+            }
+          }
+
+          if (part.input === undefined && part.output === undefined && !part.errorText && part.toolCallId) {
             const detailNode = document.createElement("div");
             detailNode.className = "tool-call-detail";
             detailNode.textContent = part.toolCallId;
@@ -685,19 +692,19 @@
           return item;
         }
 
-        function createToolInputDetails(input) {
+        function createToolPayloadDetails(kind, value) {
           const details = document.createElement("details");
           const summary = document.createElement("summary");
-          summary.textContent = "Show tool input";
+          summary.textContent = "Show tool " + kind;
           details.appendChild(summary);
 
           const pre = document.createElement("pre");
-          pre.className = "tool-input";
-          pre.textContent = compactJson(input);
+          pre.className = "tool-payload";
+          pre.textContent = compactJson(value);
           details.appendChild(pre);
 
           details.addEventListener("toggle", function () {
-            summary.textContent = details.open ? "Hide tool input" : "Show tool input";
+            summary.textContent = (details.open ? "Hide tool " : "Show tool ") + kind;
           });
 
           return details;
@@ -1047,6 +1054,7 @@
             return {
               toolCallId: event.toolCallId,
               state: "completed",
+              output: event.output,
             };
           }
           if (event.type === "tool-input-error" || event.type === "tool-output-error" || event.type === "tool-output-denied") {
