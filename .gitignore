@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Cloudflare/Wrangler local state
+.wrangler/
+.mf/
+.dev.vars
+.dev.vars.*
+!.dev.vars.sample
+wrangler.local.toml
+wrangler.*.local.toml
+
+# Environment files and secrets
+.env
+.env.*
+!.env.sample
+!.env.example
+*.pem
+*.key
+*.crt
+*credentials*.json
+*secret*.json
+
+# Build and generated output
+dist/
+build/
+.output/
+.cache/
+.tmp/
+tmp/
+coverage/
+*.tsbuildinfo
+worker-configuration.generated.d.ts
+
+# Logs and local benchmark artifacts
+*.log
+logs/
+benchmark-results*.json
+bench-results*.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

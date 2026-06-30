@@ -1,0 +1,27 @@
+{
+  "name": "mirako-interactive-agent",
+  "description": "Mirako interactive Cloudflare AI agent with one configurable chat API.",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bunx wrangler dev",
+    "playground": "bun run playground/server.ts",
+    "deploy": "bunx wrangler deploy",
+    "deploy:dry-run": "bunx wrangler deploy --dry-run",
+    "test": "bun test tests/*.test.ts",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.75",
+    "@cloudflare/ai-chat": "^0.7.1",
+    "agents": "^0.12.4",
+    "ai": "^6.0.185",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260430.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.85.0"
+  }
+}

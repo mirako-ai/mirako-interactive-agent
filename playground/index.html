@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mirako-interactive-agent playground</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b1020;
+        color: #e5ecff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        height: 100svh;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 32%),
+          radial-gradient(circle at top right, rgba(168, 85, 247, 0.15), transparent 28%),
+          #0b1020;
+      }
+
+      main {
+        width: 100%;
+        height: 100svh;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+        gap: 16px;
+        overflow: hidden;
+      }
+
+      .card {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 20px;
+        box-shadow: 0 22px 70px rgba(2, 6, 23, 0.45);
+        backdrop-filter: blur(12px);
+      }
+
+      .settings {
+        padding: 20px;
+        min-height: 0;
+        overflow: auto;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.35rem;
+      }
+
+      .hint {
+        margin: 0 0 18px;
+        color: #a8b3cf;
+        line-height: 1.5;
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.92rem;
+        color: #cdd7ee;
+      }
+
+      input,
+      textarea,
+      button {
+        font: inherit;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 11px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(15, 23, 42, 0.8);
+        color: #f8fbff;
+      }
+
+      textarea {
+        min-height: 88px;
+        resize: vertical;
+      }
+
+      input:focus,
+      textarea:focus,
+      button:focus {
+        outline: 2px solid rgba(96, 165, 250, 0.75);
+        outline-offset: 2px;
+      }
+
+      .inline {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 11px 14px;
+        cursor: pointer;
+        color: #08111f;
+        background: linear-gradient(135deg, #8b5cf6, #60a5fa);
+        font-weight: 700;
+      }
+
+      button.secondary {
+        color: #dbe7ff;
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
+
+      .status {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.78);
+        color: #bfdbfe;
+      }
+
+      .status.error {
+        background: rgba(127, 29, 29, 0.45);
+        color: #fecaca;
+      }
+
+      .chat {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        overflow: hidden;
+      }
+
+      .transcript {
+        padding: 20px;
+        overflow: auto;
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .empty {
+        margin: auto;
+        color: #94a3b8;
+        text-align: center;
+        max-width: 36ch;
+        line-height: 1.6;
+      }
+
+      .message {
+        max-width: min(78ch, 85%);
+        padding: 14px 16px;
+        border-radius: 18px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.55;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .message header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 8px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9fb0d9;
+      }
+
+      .message-meta {
+        white-space: nowrap;
+      }
+
+      .message.user {
+        margin-left: auto;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.32), rgba(14, 165, 233, 0.18));
+      }
+
+      .message.assistant {
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      .message.error {
+        border-color: rgba(248, 113, 113, 0.35);
+        background: rgba(127, 29, 29, 0.35);
+      }
+
+      .message-text:empty {
+        display: none;
+      }
+
+      .tool-stack {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .tool-call {
+        display: grid;
+        gap: 4px;
+        padding: 9px 11px;
+        border-radius: 12px;
+        border: 1px solid rgba(96, 165, 250, 0.22);
+        background: rgba(30, 41, 59, 0.65);
+        color: #cfe2ff;
+        font-size: 0.82rem;
+        white-space: normal;
+      }
+
+      .tool-call.failed {
+        border-color: rgba(248, 113, 113, 0.35);
+        background: rgba(127, 29, 29, 0.25);
+        color: #fecaca;
+      }
+
+      .tool-call.completed {
+        border-color: rgba(74, 222, 128, 0.28);
+        background: rgba(20, 83, 45, 0.22);
+        color: #bbf7d0;
+      }
+
+      .tool-call-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+      }
+
+      .tool-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
+      }
+
+      .tool-call.completed .tool-dot {
+        background: #4ade80;
+        box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.12);
+      }
+
+      .tool-call.failed .tool-dot {
+        background: #f87171;
+        box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.12);
+      }
+
+      .tool-call-detail {
+        color: #9fb0d9;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .tool-call details {
+        display: grid;
+        gap: 6px;
+      }
+
+      .tool-call summary {
+        cursor: pointer;
+        color: #bfdbfe;
+        font-weight: 650;
+      }
+
+      .tool-input {
+        max-height: 260px;
+        overflow: auto;
+        margin: 0;
+        padding: 9px 10px;
+        border-radius: 10px;
+        background: rgba(2, 6, 23, 0.45);
+        color: #dbeafe;
+        font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .media-stack {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .media-preview {
+        margin: 0;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(2, 6, 23, 0.4);
+      }
+
+      .media-preview img,
+      .media-preview video {
+        display: block;
+        width: 100%;
+        max-height: 460px;
+        object-fit: contain;
+        background: #020617;
+      }
+
+      .media-preview figcaption {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 11px;
+        color: #a8b3cf;
+        font-size: 0.78rem;
+        line-height: 1.35;
+      }
+
+      .media-preview a {
+        color: #bfdbfe;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      form {
+        padding: 16px 20px 20px;
+        border-top: 1px solid rgba(148, 163, 184, 0.16);
+        display: grid;
+        gap: 12px;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        color: #94a3b8;
+        font-size: 0.86rem;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      @media (max-width: 900px) {
+        body {
+          height: auto;
+          min-height: 100svh;
+          overflow: auto;
+        }
+
+        main {
+          height: auto;
+          min-height: 100svh;
+          grid-template-columns: 1fr;
+          overflow: visible;
+        }
+
+        .settings,
+        .chat {
+          min-height: auto;
+          overflow: visible;
+        }
+
+        .message {
+          max-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card settings">
+        <h1>mirako-interactive-agent Playground</h1>
+        <p class="hint">
+          Standalone local tester for the chat endpoint. Run this page separately from Wrangler, point it at your local worker, and each request will send only the latest user turn.
+        </p>
+        <div class="stack">
+          <div class="grid">
+            <label>
+              Chat endpoint
+              <input id="endpoint" type="url" placeholder="http://127.0.0.1:8787/v1/chat" />
+            </label>
+            <label>
+              API key
+              <input id="api-key" type="password" placeholder="Optional bearer token" autocomplete="off" />
+            </label>
+            <label>
+              Session ID
+              <span class="inline">
+                <input id="session-id" type="text" spellcheck="false" />
+                <button id="new-session" class="secondary" type="button">New session</button>
+              </span>
+            </label>
+          </div>
+          <div id="status" class="status">Ready.</div>
+        </div>
+      </section>
+
+      <section class="card chat">
+        <div id="transcript" class="transcript">
+          <p class="empty">No messages yet. The worker keeps prior turns by <code>session_id</code>, so this page only sends the latest user turn.</p>
+        </div>
+
+        <form id="composer">
+          <label>
+            User message
+            <textarea id="user-message" placeholder="Type the next user turn and press Send."></textarea>
+          </label>
+          <div class="actions">
+            <span>Enter sends. Shift+Enter adds a new line.</span>
+            <button id="send" type="submit">Send</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        const state = {
+          conversation: [],
+          busy: false,
+        };
+
+        const elements = {
+          endpoint: document.getElementById("endpoint"),
+          apiKey: document.getElementById("api-key"),
+          sessionId: document.getElementById("session-id"),
+          status: document.getElementById("status"),
+          transcript: document.getElementById("transcript"),
+          composer: document.getElementById("composer"),
+          userMessage: document.getElementById("user-message"),
+          send: document.getElementById("send"),
+          newSession: document.getElementById("new-session"),
+        };
+
+        const defaultEndpoint = "http://127.0.0.1:8787/v1/chat";
+
+        elements.endpoint.value = defaultEndpoint;
+        resetSession();
+        renderTranscript();
+
+        elements.newSession.addEventListener("click", function () {
+          resetSession();
+          setStatus("Started a fresh session.", false);
+        });
+
+        elements.composer.addEventListener("submit", function (event) {
+          event.preventDefault();
+          void sendMessage();
+        });
+
+        elements.userMessage.addEventListener("keydown", function (event) {
+          if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+            return;
+          }
+
+          event.preventDefault();
+          void sendMessage();
+        });
+
+        function resetSession() {
+          elements.sessionId.value = newId("session");
+          state.conversation = [];
+          renderTranscript();
+        }
+
+        function newId(prefix) {
+          if (window.crypto && typeof window.crypto.randomUUID === "function") {
+            return prefix + "-" + window.crypto.randomUUID();
+          }
+          return prefix + "-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+        }
+
+        function setStatus(message, isError) {
+          elements.status.textContent = message;
+          elements.status.className = isError ? "status error" : "status";
+        }
+
+        function renderTranscript() {
+          elements.transcript.innerHTML = "";
+
+          if (state.conversation.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "empty";
+            empty.textContent =
+              "No messages yet. The worker keeps prior turns by session_id, so this page only sends the latest user turn.";
+            elements.transcript.appendChild(empty);
+            return;
+          }
+
+          state.conversation.forEach(function (message) {
+            const article = document.createElement("article");
+            article.className = "message " + message.role + (message.error ? " error" : "");
+
+            const header = document.createElement("header");
+            const title = document.createElement("span");
+            title.textContent = message.role === "user" ? "User" : "Assistant";
+            header.appendChild(title);
+
+            if (message.role === "assistant" && Number.isFinite(message.responseTimeMs)) {
+              const meta = document.createElement("span");
+              meta.className = "message-meta";
+              meta.textContent = formatDuration(message.responseTimeMs);
+              header.appendChild(meta);
+            }
+
+            article.appendChild(header);
+
+            const body = document.createElement("div");
+            body.className = "message-text";
+            body.textContent = readMessageText(message);
+            article.appendChild(body);
+
+            const toolParts = message.parts.filter(isToolIndicatorPart);
+            if (toolParts.length > 0) {
+              const toolStack = document.createElement("div");
+              toolStack.className = "tool-stack";
+              toolParts.forEach(function (part) {
+                toolStack.appendChild(createToolCallIndicator(part));
+              });
+              article.appendChild(toolStack);
+            }
+
+            const mediaParts = message.parts.filter(isRenderableMediaPart);
+            if (mediaParts.length > 0) {
+              const mediaStack = document.createElement("div");
+              mediaStack.className = "media-stack";
+              mediaParts.forEach(function (part) {
+                mediaStack.appendChild(createMediaPreview(part));
+              });
+              article.appendChild(mediaStack);
+            }
+
+            elements.transcript.appendChild(article);
+          });
+
+          elements.transcript.scrollTop = elements.transcript.scrollHeight;
+        }
+
+        function appendMessage(message) {
+          state.conversation.push(message);
+          renderTranscript();
+        }
+
+        function replaceMessageId(currentId, nextId) {
+          const message = state.conversation.find(function (item) {
+            return item.id === currentId;
+          });
+          if (message) {
+            message.id = nextId;
+          }
+        }
+
+        function updateAssistantText(messageId, text, isError) {
+          const message = state.conversation.find(function (item) {
+            return item.id === messageId;
+          });
+          if (!message) {
+            return;
+          }
+          const textPart = message.parts.find(function (part) {
+            return part.type === "text";
+          });
+          if (textPart) {
+            textPart.text = text;
+          } else {
+            message.parts.unshift({ type: "text", text: text });
+          }
+          message.error = Boolean(isError);
+          renderTranscript();
+        }
+
+        function addAssistantPart(messageId, part) {
+          const message = state.conversation.find(function (item) {
+            return item.id === messageId;
+          });
+          if (!message) {
+            return;
+          }
+
+          if ((part.type === "data-image" || part.type === "data-video") && part.id) {
+            const existingIndex = message.parts.findIndex(function (existing) {
+              return existing.type === part.type && existing.id === part.id;
+            });
+            if (existingIndex !== -1) {
+              message.parts[existingIndex] = part;
+              renderTranscript();
+              return;
+            }
+          }
+
+          message.parts.push(part);
+          renderTranscript();
+        }
+
+        function addOrUpdateAssistantTool(messageId, update) {
+          const message = state.conversation.find(function (item) {
+            return item.id === messageId;
+          });
+          if (!message) {
+            return;
+          }
+
+          const existing = message.parts.find(function (part) {
+            return isToolIndicatorPart(part) && part.toolCallId === update.toolCallId;
+          });
+          if (existing) {
+            Object.assign(existing, update);
+          } else {
+            message.parts.push(Object.assign({ type: "tool-call" }, update));
+          }
+          renderTranscript();
+        }
+
+        function readMessageText(message) {
+          return message.parts
+            .filter(function (part) {
+              return part.type === "text";
+            })
+            .map(function (part) {
+              return part.text;
+            })
+            .join("");
+        }
+
+        function isRenderableMediaPart(part) {
+          const media = mediaDetails(part);
+          return Boolean(media && isBrowserHttpUrl(media.url));
+        }
+
+        function isToolIndicatorPart(part) {
+          return part && part.type === "tool-call" && typeof part.toolCallId === "string";
+        }
+
+        function createToolCallIndicator(part) {
+          const item = document.createElement("div");
+          item.className = "tool-call " + part.state;
+
+          const title = document.createElement("div");
+          title.className = "tool-call-title";
+
+          const dot = document.createElement("span");
+          dot.className = "tool-dot";
+          title.appendChild(dot);
+
+          const label = document.createElement("span");
+          label.textContent = toolStatusLabel(part);
+          title.appendChild(label);
+          item.appendChild(title);
+
+          if (part.errorText) {
+            const detailNode = document.createElement("div");
+            detailNode.className = "tool-call-detail";
+            detailNode.textContent = part.errorText;
+            item.appendChild(detailNode);
+          } else if (part.input !== undefined) {
+            item.appendChild(createToolInputDetails(part.input));
+          } else if (part.toolCallId) {
+            const detailNode = document.createElement("div");
+            detailNode.className = "tool-call-detail";
+            detailNode.textContent = part.toolCallId;
+            item.appendChild(detailNode);
+          }
+
+          return item;
+        }
+
+        function createToolInputDetails(input) {
+          const details = document.createElement("details");
+          const summary = document.createElement("summary");
+          summary.textContent = "Show tool input";
+          details.appendChild(summary);
+
+          const pre = document.createElement("pre");
+          pre.className = "tool-input";
+          pre.textContent = compactJson(input);
+          details.appendChild(pre);
+
+          details.addEventListener("toggle", function () {
+            summary.textContent = details.open ? "Hide tool input" : "Show tool input";
+          });
+
+          return details;
+        }
+
+        function toolStatusLabel(part) {
+          const name = part.toolName || "tool";
+          if (part.state === "completed") {
+            return "Tool completed: " + name;
+          }
+          if (part.state === "failed") {
+            return "Tool failed: " + name;
+          }
+          if (part.state === "approval") {
+            return "Tool approval requested: " + name;
+          }
+          return "Calling tool: " + name;
+        }
+
+        function compactJson(value) {
+          try {
+            return JSON.stringify(value, null, 2);
+          } catch {
+            return String(value);
+          }
+        }
+
+        function createMediaPreview(part) {
+          const media = mediaDetails(part);
+          const figure = document.createElement("figure");
+          figure.className = "media-preview";
+
+          if (!media) {
+            return figure;
+          }
+
+          if (media.kind === "image") {
+            const image = document.createElement("img");
+            image.src = media.url;
+            image.alt = media.label;
+            image.loading = "lazy";
+            figure.appendChild(image);
+          } else {
+            const video = document.createElement("video");
+            video.src = media.url;
+            video.controls = true;
+            video.preload = "metadata";
+            video.playsInline = true;
+            figure.appendChild(video);
+          }
+
+          const caption = document.createElement("figcaption");
+          const label = document.createElement("span");
+          label.textContent = media.label;
+          caption.appendChild(label);
+
+          const link = document.createElement("a");
+          link.href = media.url;
+          link.target = "_blank";
+          link.rel = "noreferrer noopener";
+          link.textContent = "Open";
+          caption.appendChild(link);
+          figure.appendChild(caption);
+
+          return figure;
+        }
+
+        function mediaDetails(part) {
+          if (part.type === "file") {
+            if (typeof part.url !== "string" || typeof part.mediaType !== "string") {
+              return null;
+            }
+            if (!part.mediaType.startsWith("image/") && !part.mediaType.startsWith("video/")) {
+              return null;
+            }
+            return {
+              kind: part.mediaType.startsWith("image/") ? "image" : "video",
+              url: part.url,
+              label: part.filename || part.mediaType,
+            };
+          }
+
+          if (part.type !== "data-image" && part.type !== "data-video") {
+            return null;
+          }
+          if (!part.data || typeof part.data.url !== "string") {
+            return null;
+          }
+
+          const displayMode = part.data.displayMode === "sbs" ? "sbs" : "pip";
+          return {
+            kind: part.type === "data-image" ? "image" : "video",
+            url: part.data.url,
+            label: part.type + " · " + displayMode + (part.id ? " · " + part.id : ""),
+          };
+        }
+
+        function isBrowserHttpUrl(value) {
+          try {
+            const url = new URL(value);
+            return url.protocol === "http:" || url.protocol === "https:";
+          } catch {
+            return false;
+          }
+        }
+
+        function formatDuration(durationMs) {
+          if (!Number.isFinite(durationMs) || durationMs < 0) {
+            return "";
+          }
+          if (durationMs < 1000) {
+            return Math.round(durationMs) + " ms";
+          }
+          return (durationMs / 1000).toFixed(durationMs < 10000 ? 1 : 0) + " s";
+        }
+
+        async function sendMessage() {
+          if (state.busy) {
+            return;
+          }
+
+          const endpoint = elements.endpoint.value.trim();
+          const sessionId = elements.sessionId.value.trim();
+          const userText = elements.userMessage.value.trim();
+
+          if (!endpoint) {
+            setStatus("Chat endpoint is required.", true);
+            return;
+          }
+          if (!sessionId) {
+            setStatus("Session ID is required.", true);
+            return;
+          }
+          if (!userText) {
+            setStatus("User message must not be empty.", true);
+            return;
+          }
+
+          const userMessage = {
+            id: newId("user"),
+            role: "user",
+            parts: [{ type: "text", text: userText }],
+          };
+
+          const payload = {
+            session_id: sessionId,
+            messages: [userMessage],
+          };
+
+          const assistantMessageId = newId("assistant");
+          const assistantMessage = {
+            id: assistantMessageId,
+            role: "assistant",
+            parts: [{ type: "text", text: "" }],
+            responseTimeMs: null,
+          };
+          appendMessage(userMessage);
+          appendMessage(assistantMessage);
+
+          elements.userMessage.value = "";
+          elements.userMessage.disabled = true;
+          elements.send.disabled = true;
+          state.busy = true;
+          setStatus("Streaming response...", false);
+          const requestStartedAt = performance.now();
+
+          try {
+            const headers = { "content-type": "application/json" };
+            const apiKey = elements.apiKey.value.trim();
+            if (apiKey) {
+              headers.authorization = "Bearer " + apiKey;
+            }
+
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: headers,
+              body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+              throw new Error(await readError(response));
+            }
+            if (!response.body) {
+              throw new Error("The response did not include a body.");
+            }
+
+            await consumeUiStream(response.body, assistantMessageId);
+            assistantMessage.responseTimeMs = performance.now() - requestStartedAt;
+            renderTranscript();
+            setStatus("Response complete.", false);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Request failed.";
+            assistantMessage.responseTimeMs = performance.now() - requestStartedAt;
+            assistantMessage.parts = [{ type: "text", text: "[error] " + message }];
+            assistantMessage.error = true;
+            renderTranscript();
+            setStatus(message, true);
+          } finally {
+            state.busy = false;
+            elements.userMessage.disabled = false;
+            elements.send.disabled = false;
+            elements.userMessage.focus();
+          }
+        }
+
+        async function readError(response) {
+          const text = await response.text();
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed && parsed.error && typeof parsed.error.message === "string") {
+              return "HTTP " + response.status + ": " + parsed.error.message;
+            }
+          } catch {
+            // Ignore JSON parse failures and fall back to plain text.
+          }
+
+          const detail = text.trim() || response.statusText || "Request failed";
+          return "HTTP " + response.status + ": " + detail;
+        }
+
+        async function consumeUiStream(stream, initialAssistantId) {
+          const reader = stream.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let assistantId = initialAssistantId;
+
+          while (true) {
+            const result = await reader.read();
+            buffer += decoder.decode(result.value || new Uint8Array(), { stream: !result.done });
+
+            let boundary = buffer.indexOf("\n\n");
+            while (boundary !== -1) {
+              const rawEvent = buffer.slice(0, boundary);
+              buffer = buffer.slice(boundary + 2);
+              assistantId = applyUiEvent(rawEvent, assistantId);
+              boundary = buffer.indexOf("\n\n");
+            }
+
+            if (result.done) {
+              if (buffer.trim()) {
+                assistantId = applyUiEvent(buffer, assistantId);
+              }
+              break;
+            }
+          }
+
+          if (!hasAssistantContent(assistantId)) {
+            updateAssistantText(assistantId, "[no text content in response]", false);
+          }
+        }
+
+        function readAssistantText(messageId) {
+          const message = state.conversation.find(function (item) {
+            return item.id === messageId;
+          });
+          if (!message) {
+            return "";
+          }
+          return readMessageText(message);
+        }
+
+        function hasAssistantContent(messageId) {
+          const message = state.conversation.find(function (item) {
+            return item.id === messageId;
+          });
+          if (!message) {
+            return false;
+          }
+          return readMessageText(message).length > 0 || message.parts.some(isRenderableMediaPart) || message.parts.some(isToolIndicatorPart);
+        }
+
+        function applyUiEvent(rawEvent, currentAssistantId) {
+          const lines = rawEvent.split(/\r?\n/);
+          const data = [];
+          lines.forEach(function (line) {
+            if (line.startsWith("data:")) {
+              data.push(line.slice(5).trimStart());
+            }
+          });
+
+          if (data.length === 0) {
+            return currentAssistantId;
+          }
+
+          const payloadText = data.join("\n");
+          if (payloadText === "[DONE]") {
+            return currentAssistantId;
+          }
+
+          let event;
+          try {
+            event = JSON.parse(payloadText);
+          } catch {
+            return currentAssistantId;
+          }
+
+          if (!event || typeof event.type !== "string") {
+            return currentAssistantId;
+          }
+
+          if (event.type === "start" && typeof event.messageId === "string" && event.messageId.length > 0) {
+            replaceMessageId(currentAssistantId, event.messageId);
+            return event.messageId;
+          }
+
+          if (event.type === "text-delta" && typeof event.delta === "string") {
+            updateAssistantText(currentAssistantId, readAssistantText(currentAssistantId) + event.delta, false);
+            return currentAssistantId;
+          }
+
+          const toolUpdate = normalizeToolCallEvent(event);
+          if (toolUpdate) {
+            addOrUpdateAssistantTool(currentAssistantId, toolUpdate);
+            return currentAssistantId;
+          }
+
+          const mediaPart = normalizeStreamMediaPart(event);
+          if (mediaPart) {
+            addAssistantPart(currentAssistantId, mediaPart);
+            return currentAssistantId;
+          }
+
+          return currentAssistantId;
+        }
+
+        function normalizeToolCallEvent(event) {
+          if (!event.toolCallId || typeof event.toolCallId !== "string") {
+            return null;
+          }
+
+          if (event.type === "tool-input-start") {
+            return {
+              toolCallId: event.toolCallId,
+              toolName: typeof event.toolName === "string" ? event.toolName : undefined,
+              state: "running",
+            };
+          }
+          if (event.type === "tool-input-available") {
+            return {
+              toolCallId: event.toolCallId,
+              toolName: typeof event.toolName === "string" ? event.toolName : undefined,
+              state: "running",
+              input: event.input,
+            };
+          }
+          if (event.type === "tool-output-available") {
+            return {
+              toolCallId: event.toolCallId,
+              state: "completed",
+            };
+          }
+          if (event.type === "tool-input-error" || event.type === "tool-output-error" || event.type === "tool-output-denied") {
+            return {
+              toolCallId: event.toolCallId,
+              toolName: typeof event.toolName === "string" ? event.toolName : undefined,
+              state: "failed",
+              errorText: typeof event.errorText === "string" ? event.errorText : undefined,
+            };
+          }
+          if (event.type === "tool-approval-request") {
+            return {
+              toolCallId: event.toolCallId,
+              toolName: typeof event.toolName === "string" ? event.toolName : undefined,
+              state: "approval",
+            };
+          }
+
+          return null;
+        }
+
+        function normalizeStreamMediaPart(event) {
+          if (event.type === "file") {
+            if (typeof event.url !== "string" || typeof event.mediaType !== "string") {
+              return null;
+            }
+            if (!event.mediaType.startsWith("image/") && !event.mediaType.startsWith("video/")) {
+              return null;
+            }
+            return {
+              type: "file",
+              url: event.url,
+              mediaType: event.mediaType,
+              filename: typeof event.filename === "string" ? event.filename : undefined,
+            };
+          }
+
+          if (event.type !== "data-image" && event.type !== "data-video") {
+            return null;
+          }
+          if (!event.data || typeof event.data.url !== "string") {
+            return null;
+          }
+          if (event.data.displayMode !== undefined && event.data.displayMode !== "pip" && event.data.displayMode !== "sbs") {
+            return null;
+          }
+
+          return {
+            type: event.type,
+            id: typeof event.id === "string" ? event.id : undefined,
+            data: {
+              url: event.data.url,
+              displayMode: event.data.displayMode === "sbs" ? "sbs" : "pip",
+            },
+          };
+        }
+      })();
+    </script>
+  </body>
+</html>

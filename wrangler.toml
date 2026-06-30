@@ -1,0 +1,22 @@
+name = "mirako-interactive-agent"
+main = "src/index.ts"
+compatibility_date = "2026-05-04"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "MetisAgentCore"
+class_name = "MetisAgentCore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MetisAgentCore"]
+
+[vars]
+SESSION_TTL_MS = "3600000"
+MCP_SERVER_ALLOWLIST = ""
+MCP_ALLOW_INSECURE_HTTP = "false"
+MCP_TIMEOUT_MS = "15000"
+CODE_MODE_ENABLED = "false"
+
+[observability]
+enabled = true
