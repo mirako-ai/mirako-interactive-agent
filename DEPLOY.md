@@ -67,7 +67,7 @@ After deployment, add runtime secrets in the Cloudflare dashboard:
 2. Go to `Settings`.
 3. Open `Variables and secrets`.
 4. Click `+ Add`.
-5. Add `API_KEY` with `Type = Secret`.
+5. Add `API_KEY` with `Type = Secret`. (A random key to be used in later step)
 6. Add `GOOGLE_API_KEY` with `Type = Secret`.
 7. Save or deploy the changes if Cloudflare prompts you to do so.
 
