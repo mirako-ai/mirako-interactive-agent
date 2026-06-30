@@ -3,9 +3,9 @@ interface Env {
   LOADER?: WorkerLoader;
   API_KEY?: string;
   GOOGLE_API_KEY?: string;
-  EXAMPLE_MCP_TOKEN?: string;
   SESSION_TTL_MS?: string;
   MCP_SERVER_ALLOWLIST?: string;
+  MCP_SERVER_TOKEN?: string;
   MCP_TIMEOUT_MS?: string;
   MCP_ALLOW_INSECURE_HTTP?: string;
   CODE_MODE_ENABLED?: string;

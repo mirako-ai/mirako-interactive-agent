@@ -34,7 +34,7 @@ export function createAgentMcpServers(env: Env): McpServerConfig[] {
     {
       name: "example",
       url: "https://mcp.example.com",
-      authToken: env.EXAMPLE_MCP_TOKEN,
+      authToken: env.MCP_SERVER_TOKEN,
     },
   ];
 }
@@ -130,9 +130,9 @@ Set local secrets in `.dev.vars` before calling `/v1/chat`:
 ```text
 API_KEY="replace-with-a-random-local-value"
 GOOGLE_API_KEY="replace-with-local-google-key"
-EXAMPLE_MCP_TOKEN="optional-mcp-token"
 SESSION_TTL_MS="3600000"
 MCP_SERVER_ALLOWLIST=""
+MCP_SERVER_TOKEN="optional-mcp-token"
 MCP_TIMEOUT_MS="15000"
 MCP_ALLOW_INSECURE_HTTP="false"
 ```
