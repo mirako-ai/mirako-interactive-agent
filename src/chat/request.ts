@@ -80,6 +80,10 @@ export function normalizeChatOptionsBody(body: unknown, messages: UIMessage[]): 
   return normalizeChatRequestBody(withMessages);
 }
 
+export function getTurnMetadata(body: unknown): Record<string, unknown> | undefined {
+  return isRecord(body) && isRecord(body.metadata) ? body.metadata : undefined;
+}
+
 export function invalid(message: string, param?: string): { ok: false; error: ChatRequestError } {
   return {
     ok: false,

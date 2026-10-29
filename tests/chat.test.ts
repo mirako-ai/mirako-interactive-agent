@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { test } from "bun:test";
+import { spyOn, test } from "bun:test";
 import { tool, type UIMessage } from "ai";
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
 import { z } from "zod";
+import { createAgentTools } from "../src/agent-config";
 import { InMemoryCodeModeRunLimiter } from "../src/codemode/executor";
 import { CHAT_PATH, normalizeChatRequestBody } from "../src/chat/request";
 import { createMetisChatResponse, isInternalToolUiChunk, mergeSessionMessages, sanitizeMessagesForPersistence } from "../src/chat/runtime";
@@ -130,9 +131,60 @@ test("createMetisChatResponse emits AI SDK UI stream chunks", async () => {
     .split("\n\n")
     .map((event) => event.replace(/^data: /, ""));
 
+  assert.equal(events.some((event) => event.includes("data-end-interaction")), false);
   assert.equal(events.some((event) => event.includes("chat.completion.chunk")), false);
   assert.ok(events.some((event) => event.includes('"type":"text-delta"') && event.includes('"delta":"Hello"')));
   assert.equal(events.at(-1), "[DONE]");
+});
+
+test("end_interaction streams a persistent ending before the farewell and successful finish", async () => {
+  const { text, persistedMessages, model } = await runEndingToolScenario({});
+  const chunks = uiStreamJsonChunks(text);
+  const endingIndex = chunks.findIndex((chunk) => chunk.type === "data-end-interaction");
+  const farewellIndex = chunks.findIndex((chunk) => chunk.type === "text-delta" && chunk.delta === "Goodbye!");
+  const finishIndex = chunks.findIndex((chunk) => chunk.type === "finish");
+
+  assert.deepEqual(chunks[endingIndex], { type: "data-end-interaction", data: { reason: "completed" } });
+  assert.ok(endingIndex >= 0 && endingIndex < farewellIndex && farewellIndex < finishIndex);
+  assert.equal(chunks[finishIndex].finishReason, "stop");
+  assert.equal(text.trim().split("\n\n").at(-1), "data: [DONE]");
+  assert.ok(persistedMessages.at(-1)?.parts.some((part) => part.type === "data-end-interaction"));
+  assert.equal(model.doStreamCalls.length, 2);
+});
+
+test("end_interaction rejects invalid reasons without emitting an ending", async () => {
+  const { text } = await runEndingToolScenario({ input: '{"reason":"cancelled"}' });
+  const chunks = uiStreamJsonChunks(text);
+  assert.ok(chunks.some((chunk) => chunk.type === "tool-output-error" || chunk.type === "tool-input-error"));
+  assert.equal(chunks.some((chunk) => chunk.type === "data-end-interaction"), false);
+});
+
+test("unrelated tool output cannot end the interaction", async () => {
+  const { text } = await runEndingToolScenario({ toolName: "ordinary_tool", input: "{}" });
+  const chunks = uiStreamJsonChunks(text);
+  assert.ok(chunks.some((chunk) => chunk.type === "tool-output-available" && chunk.output.reason === "completed"));
+  assert.equal(chunks.some((chunk) => chunk.type === "data-end-interaction"), false);
+});
+
+test("a failed end_interaction tool does not emit an ending", async () => {
+  const { text } = await runEndingToolScenario({ failTool: true });
+  const chunks = uiStreamJsonChunks(text);
+  assert.ok(chunks.some((chunk) => chunk.type === "tool-output-error"));
+  assert.equal(chunks.some((chunk) => chunk.type === "data-end-interaction"), false);
+});
+
+test("end_interaction pending signal is followed by a stream error when the model fails", async () => {
+  const errorLog = spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const { text } = await runEndingToolScenario({ failAfterTool: true });
+    const chunks = uiStreamJsonChunks(text);
+    const endingIndex = chunks.findIndex((chunk) => chunk.type === "data-end-interaction");
+    const errorIndex = chunks.findIndex((chunk) => chunk.type === "error");
+    assert.ok(endingIndex >= 0 && errorIndex > endingIndex);
+    assert.equal(chunks.some((chunk) => chunk.type === "text-delta" && chunk.delta === "Goodbye!"), false);
+  } finally {
+    errorLog.mockRestore();
+  }
 });
 
 test("createMetisChatResponse accepts endpoint-local tools without Code Mode or MCP config", async () => {
@@ -396,6 +448,66 @@ test("tool chunks and persisted tool parts are treated as internal", () => {
 
   assert.deepEqual(sanitized[0].parts, [{ type: "text", text: "done" }]);
 });
+
+async function runEndingToolScenario({
+  input = '{"reason":"completed"}',
+  toolName = "end_interaction",
+  failAfterTool = false,
+  failTool = false,
+}: { input?: string; toolName?: string; failAfterTool?: boolean; failTool?: boolean }) {
+  const request = normalizeChatRequestBody({
+    session_id: "session-1",
+    messages: [{ id: "msg-1", role: "user", parts: [{ type: "text", text: "Goodbye" }] }],
+  });
+  assert.ok(request.ok);
+  let callCount = 0;
+  const model = new MockLanguageModelV3({
+    provider: "mock",
+    modelId: "mock-model",
+    doStream: () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return { stream: simulateReadableStream({ chunks: [
+          { type: "stream-start", warnings: [] },
+          { type: "tool-call", toolCallId: "call-1", toolName, input },
+          { type: "finish", finishReason: { unified: "tool-calls", raw: undefined }, usage },
+        ] }) };
+      }
+      return { stream: simulateReadableStream({ chunks: failAfterTool ? [
+        { type: "stream-start", warnings: [] },
+        { type: "error", error: new Error("model failed") },
+        { type: "finish", finishReason: { unified: "error", raw: undefined }, usage },
+      ] : [
+        { type: "stream-start", warnings: [] },
+        { type: "text-start", id: "farewell" },
+        { type: "text-delta", id: "farewell", delta: "Goodbye!" },
+        { type: "text-end", id: "farewell" },
+        { type: "finish", finishReason: { unified: "stop", raw: undefined }, usage },
+      ] }) };
+    },
+  });
+  let persistedMessages: UIMessage[] = [];
+  const response = await createMetisChatResponse(
+    { CODE_MODE_ENABLED: "false" }, request.request, new InMemoryCodeModeRunLimiter(),
+    {
+      languageModel: model,
+      tools: {
+        ...createAgentTools({} as Env),
+        ...(failTool ? {
+          end_interaction: tool({
+            inputSchema: z.object({ reason: z.literal("completed") }),
+            execute: async () => { throw new Error("tool failed"); },
+          }),
+        } : {}),
+        ordinary_tool: tool({ inputSchema: z.object({}), execute: async () => ({ reason: "completed" }) }),
+      },
+      uiFinish: async ({ messages }) => { persistedMessages = messages; },
+    },
+  );
+  assert.ok(response.ok);
+  const text = await response.response.text();
+  return { text, persistedMessages, model };
+}
 
 function uiStreamJsonChunks(text: string): Array<Record<string, any>> {
   return text

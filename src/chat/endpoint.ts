@@ -3,7 +3,8 @@ import type { ToolSet, UIMessage } from "ai";
 import type { CodeModeRunLimiter } from "../codemode/executor";
 import { jsonError, requestError, requireApiKey, streamHeaders } from "../http";
 import type { McpServerConfig } from "../mcp";
-import { normalizeChatRequestBody } from "./request";
+import { getTurnMetadata, normalizeChatRequestBody } from "./request";
+import { isRecord } from "../shared/guards";
 import type { SupportedModel } from "./models";
 import { createMetisChatResponse, mergeSessionMessages, sanitizeMessagesForPersistence } from "./runtime";
 import { durableObjectNameForSession, extractSessionIdFromBody, loadSessionTtlMs } from "./session";
@@ -65,6 +66,15 @@ export class ChatEndpoint {
     const normalized = normalizeChatRequestBody(rawBody);
     if (!normalized.ok) {
       return requestError(normalized.error);
+    }
+
+    const metadata = getTurnMetadata(rawBody);
+    // Example: const agentId = metadata?.agent_id; // Mirako agent calling this endpoint
+    if (isRecord(metadata?.user)) {
+      // Example: const displayName = metadata.user.display_name; // personalize this turn
+      // The embedding application supplies this data; verify identity separately for authorization.
+    } else {
+      // No user metadata was supplied; this sample handles the turn normally.
     }
 
     const ttl = loadSessionTtlMs(context.env);
