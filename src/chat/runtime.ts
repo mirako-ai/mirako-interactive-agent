@@ -163,7 +163,19 @@ export async function createMetisChatResponse(
     onFinish: options.uiFinish,
     onError: (error) => errorMessage(error),
     execute: ({ writer }) => {
-      writer.merge(modelStream.pipeThrough(internalToolChunkFilter()).pipeThrough(metisToolResultChunkTransform()));
+      // Example only: emit a persistent web-app part when your agent needs one.
+      // The URL must be browser-accessible and allow iframe embedding.
+      // writer.write({
+      //   type: "data-webapp",
+      //   id: "example-webapp",
+      //   data: { url: "https://example.com/app", displayMode: "sbs" },
+      // });
+      writer.merge(
+        modelStream
+          .pipeThrough(internalToolChunkFilter())
+          .pipeThrough(endInteractionChunkTransform(Boolean(options.tools?.end_interaction)))
+          .pipeThrough(metisToolResultChunkTransform()),
+      );
     },
   });
 
@@ -227,6 +239,40 @@ function internalToolChunkFilter() {
       }
 
       controller.enqueue(chunk);
+    },
+  });
+}
+
+function endInteractionChunkTransform(hasLocalEndInteractionTool: boolean) {
+  const calls = new Set<string>();
+  let emitted = false;
+
+  return new TransformStream<UIMessageChunk, UIMessageChunk>({
+    transform(chunk, controller) {
+      if (
+        hasLocalEndInteractionTool &&
+        chunk.type === "tool-input-available" &&
+        chunk.toolName === "end_interaction" &&
+        isRecord(chunk.input) &&
+        chunk.input.reason === "completed" &&
+        !chunk.providerExecuted
+      ) {
+        calls.add(chunk.toolCallId);
+      }
+
+      controller.enqueue(chunk);
+      if (
+        chunk.type === "tool-output-available" &&
+        !chunk.preliminary &&
+        !chunk.providerExecuted &&
+        calls.delete(chunk.toolCallId) &&
+        isRecord(chunk.output) &&
+        chunk.output.reason === "completed" &&
+        !emitted
+      ) {
+        emitted = true;
+        controller.enqueue({ type: "data-end-interaction", data: { reason: "completed" } });
+      }
     },
   });
 }

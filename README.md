@@ -21,7 +21,7 @@ Edit `src/agent-config.ts`:
 
 - `AGENT_MODEL` selects the provider model.
 - `AGENT_SYSTEM_PROMPT` defines the agent behavior.
-- `createAgentTools()` defines local AI SDK tools. The sample includes `get_current_time`.
+- `createAgentTools()` defines local AI SDK tools. The sample includes `get_current_time` and `end_interaction`.
 - `createAgentMcpServers()` defines MCP servers for every `/v1/chat` request. It contains a commented placeholder.
 
 Tool calling follows AI SDK Core tools. Reference: <https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling>.
@@ -70,6 +70,7 @@ Rules:
 - Public message parts are limited to `text` and `file`.
 - `model`, `mcp_servers`, `tools`, `functions`, `tool_choice`, `stream`, and `n` are rejected.
 - Streaming is always enabled.
+- Optional Mirako `metadata` can contain `agent_id` and a `user` snapshot. The example in `src/chat/endpoint.ts` does not use the snapshot; it is unverified and must not be trusted for authorization.
 
 ## Chat Response
 
@@ -95,6 +96,8 @@ data: {"type":"finish"}
 data: [DONE]
 ```
 
+When `end_interaction` succeeds, the stream requests that Mirako end the call after the farewell. A standalone client receives the `data-end-interaction` part but must handle it itself.
+
 ## Visual Tool Results
 
 Local tools and MCP tools can return visual client parts directly. Matching visual parts are streamed to the client, while the model only receives a generic successful-tool acknowledgement.
@@ -114,6 +117,8 @@ Rules:
 - `file.mediaType` must start with `image/` or `video/`.
 - `displayMode` may be `pip`(picture-in-picture) or `sbs`(side-by-side).
 - Local file paths, `data:` URLs, inline binary, and base64 media are ignored.
+
+`src/chat/runtime.ts` also contains a commented example for emitting `data-webapp`. The sample does not relay web-app tool results or render web apps in the playground.
 
 ## Local Development
 
